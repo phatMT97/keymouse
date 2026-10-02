@@ -283,6 +283,8 @@ unsafe extern "system" {
     fn CreateWindowExW(dw_ex_style: u32, lp_class_name: *const u16, lp_window_name: *const u16, dw_style: u32, x: i32, y: i32, n_width: i32, n_height: i32, h_wnd_parent: isize, h_menu: isize, h_instance: isize, lp_param: *mut std::ffi::c_void) -> isize;
     fn DefWindowProcW(h_wnd: isize, msg: u32, w_param: usize, l_param: isize) -> isize;
     fn DestroyWindow(h_wnd: isize) -> i32;
+    fn GetWindowThreadProcessId(hwnd: isize, lpdw_process_id: *mut u32) -> u32;
+    fn IsWindow(hwnd: isize) -> i32;
     fn LoadCursorW(h_instance: isize, lp_cursor_name: *const u16) -> isize;
     fn LoadIconW(h_instance: isize, lp_icon_name: *const u16) -> isize;
     fn CreateIconIndirect(piconinfo: *const ICONINFO) -> isize;
@@ -714,16 +716,28 @@ fn reset_all_keys() {
     }
 }
 
+static UI_HWND: AtomicIsize = AtomicIsize::new(0);
+static SPAWNED_PID: AtomicU32 = AtomicU32::new(0);
 static FOUND_HWND: AtomicIsize = AtomicIsize::new(0);
 static LAST_SPAWN_TIME: AtomicU64 = AtomicU64::new(0);
 
-unsafe extern "system" fn enum_desktop_windows_proc(hwnd: isize, _lparam: isize) -> i32 {
+unsafe extern "system" fn enum_desktop_windows_proc(hwnd: isize, lparam: isize) -> i32 {
     unsafe {
+        let target_pid = lparam as u32;
+        let mut proc_id = 0u32;
+        GetWindowThreadProcessId(hwnd, &mut proc_id);
+
+        // STRICT MATCH: Only inspect windows created by OUR exact spawned Edge process!
+        // Never touch the user's personal browser or other application windows!
+        if target_pid != 0 && proc_id != target_pid {
+            return 1;
+        }
+
         let mut buf = [0u16; 512];
         let len = GetWindowTextW(hwnd, buf.as_mut_ptr(), 512);
         if len > 0 {
             let title = String::from_utf16_lossy(&buf[..len as usize]);
-            if title.contains("KeyMouse") && !title.contains("KeyMouseHost") && !title.contains("Toast") && !title.contains("KM_") {
+            if !title.contains("KeyMouseHost") && !title.contains("Toast") && !title.contains("KM_") {
                 FOUND_HWND.store(hwnd, Ordering::SeqCst);
                 return 0; // stop enumeration
             }
@@ -734,18 +748,9 @@ unsafe extern "system" fn enum_desktop_windows_proc(hwnd: isize, _lparam: isize)
 
 fn open_fluent_ui() {
     unsafe {
-        // 1. Search for existing window on Default desktop
-        FOUND_HWND.store(0, Ordering::SeqCst);
-        let desk_name = to_wstring("Default");
-        let hdesk = OpenDesktopW(desk_name.as_ptr(), 0, 0, 0x01FF);
-        if hdesk != 0 {
-            EnumDesktopWindows(hdesk, enum_desktop_windows_proc, 0);
-            CloseDesktop(hdesk);
-        }
-
-        let existing = FOUND_HWND.load(Ordering::SeqCst);
-        if existing != 0 {
-            make_window_non_resizable(existing);
+        // 1. If existing UI window is already open and valid, restore and focus it directly
+        let existing = UI_HWND.load(Ordering::SeqCst);
+        if existing != 0 && IsWindow(existing) != 0 {
             ShowWindow(existing, SW_RESTORE);
             SetForegroundWindow(existing);
             BringWindowToTop(existing);
@@ -763,7 +768,16 @@ fn open_fluent_ui() {
         }
         LAST_SPAWN_TIME.store(now, Ordering::Relaxed);
 
-        // 3. Launch isolated web app on WinSta0\Default
+        // 3. Isolated Edge / Chrome user profile dynamically resolved for any user account
+        let profile_dir = if let Ok(appdata) = std::env::var("LOCALAPPDATA") {
+            format!(r#"{}\KeyMouse\edge_profile"#, appdata)
+        } else if let Ok(temp) = std::env::var("TEMP") {
+            format!(r#"{}\KeyMouse\edge_profile"#, temp)
+        } else {
+            r#"C:\ProgramData\KeyMouse\edge_profile"#.to_string()
+        };
+        let _ = std::fs::create_dir_all(&profile_dir);
+
         let edge_x86 = "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
         let edge_x64 = "C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe";
         let chrome_path = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
@@ -777,11 +791,11 @@ fn open_fluent_ui() {
         let mut pi: PROCESS_INFORMATION = std::mem::zeroed();
 
         let cmd_str = if std::path::Path::new(edge_x86).exists() {
-            format!(r#""{}" --user-data-dir="C:\Users\Admin\.keymouse_ui_v2" --app="http://127.0.0.1:28888" --window-size=860,620 --no-first-run --no-default-browser-check --disable-features=Translate"#, edge_x86)
+            format!(r#""{}" --user-data-dir="{}" --app="http://127.0.0.1:28888" --window-size=860,620 --no-first-run --no-default-browser-check --disable-features=Translate"#, edge_x86, profile_dir)
         } else if std::path::Path::new(edge_x64).exists() {
-            format!(r#""{}" --user-data-dir="C:\Users\Admin\.keymouse_ui_v2" --app="http://127.0.0.1:28888" --window-size=860,620 --no-first-run --no-default-browser-check --disable-features=Translate"#, edge_x64)
+            format!(r#""{}" --user-data-dir="{}" --app="http://127.0.0.1:28888" --window-size=860,620 --no-first-run --no-default-browser-check --disable-features=Translate"#, edge_x64, profile_dir)
         } else if std::path::Path::new(chrome_path).exists() {
-            format!(r#""{}" --user-data-dir="C:\Users\Admin\.keymouse_ui_v2" --app="http://127.0.0.1:28888" --window-size=860,620 --no-first-run --no-default-browser-check --disable-features=Translate"#, chrome_path)
+            format!(r#""{}" --user-data-dir="{}" --app="http://127.0.0.1:28888" --window-size=860,620 --no-first-run --no-default-browser-check --disable-features=Translate"#, chrome_path, profile_dir)
         } else {
             "cmd.exe /c start http://127.0.0.1:28888".to_string()
         };
@@ -802,10 +816,12 @@ fn open_fluent_ui() {
         );
 
         if res != 0 {
+            let pid = pi.dw_process_id;
+            SPAWNED_PID.store(pid, Ordering::SeqCst);
             CloseHandle(pi.h_process);
             CloseHandle(pi.h_thread);
 
-            thread::spawn(|| {
+            thread::spawn(move || {
                 attach_to_default_desktop();
                 let mut found_count = 0;
                 for _ in 0..40 {
@@ -814,11 +830,12 @@ fn open_fluent_ui() {
                     let desk_name = to_wstring("Default");
                     let hdesk = OpenDesktopW(desk_name.as_ptr(), 0, 0, 0x01FF);
                     if hdesk != 0 {
-                        EnumDesktopWindows(hdesk, enum_desktop_windows_proc, 0);
+                        EnumDesktopWindows(hdesk, enum_desktop_windows_proc, pid as isize);
                         CloseDesktop(hdesk);
                     }
                     let win = FOUND_HWND.load(Ordering::SeqCst);
                     if win != 0 {
+                        UI_HWND.store(win, Ordering::SeqCst);
                         make_window_non_resizable(win);
                         found_count += 1;
                         if found_count >= 8 {
@@ -1868,6 +1885,10 @@ unsafe extern "system" fn tray_wnd_proc(hwnd: isize, msg: u32, w_param: usize, l
                 0
             }
             WM_DESTROY => {
+                let ui = UI_HWND.load(Ordering::SeqCst);
+                if ui != 0 && IsWindow(ui) != 0 {
+                    PostMessageW(ui, WM_CLOSE, 0, 0);
+                }
                 let toast = TOAST_HWND.load(Ordering::SeqCst);
                 if toast != 0 {
                     DestroyWindow(toast);
