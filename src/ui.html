@@ -154,6 +154,42 @@
     box-shadow: 0 0 10px var(--cyan-glow);
   }
 
+  /* Admin Status Badge */
+  .admin-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg-card);
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .admin-badge:hover {
+    transform: translateY(-1px);
+  }
+  .admin-badge.active {
+    border-color: rgba(16, 185, 129, 0.45);
+    color: var(--green);
+    background: rgba(16, 185, 129, 0.12);
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
+    cursor: default;
+  }
+  .admin-badge.warning {
+    border-color: rgba(245, 158, 11, 0.6);
+    background: rgba(245, 158, 11, 0.16);
+    color: #fbbf24;
+    box-shadow: 0 0 12px rgba(245, 158, 11, 0.25);
+    animation: pulse-admin 2s infinite ease-in-out;
+  }
+  @keyframes pulse-admin {
+    0%, 100% { border-color: rgba(245, 158, 11, 0.4); }
+    50% { border-color: rgba(245, 158, 11, 0.9); }
+  }
+
   /* Main Layout Grid */
   .main-layout {
     display: grid;
@@ -708,8 +744,14 @@
       </div>
     </div>
 
-    <!-- Header Controls: Language Switcher & Status Badge -->
+    <!-- Header Controls: Admin Badge, Language Switcher & Status Badge -->
     <div class="header-controls">
+      <!-- Admin Mode Badge -->
+      <div class="admin-badge" id="admin-badge" onclick="requestElevate()">
+        <span class="admin-icon" id="admin-icon">🛡️</span>
+        <span class="admin-text" id="admin-text">Admin</span>
+      </div>
+
       <div class="lang-switch">
         <button class="lang-btn active" id="btn-lang-vi" onclick="setLanguage('vi')">VI</button>
         <button class="lang-btn" id="btn-lang-en" onclick="setLanguage('en')">EN</button>
@@ -1079,6 +1121,12 @@
       tag_exit: "Thoát chuột",
       tag_toggle: "Bật / Tắt",
       del_hk_title: "Xoá phím tắt này",
+      admin_active: "Admin: Bật",
+      admin_inactive: "Chạy quyền Admin",
+      admin_tip_active: "Đã cấp quyền Administrator. Điều khiển đầy đủ Task Manager & cửa sổ hệ thống.",
+      admin_tip_inactive: "Windows chặn điều khiển Task Manager & cửa sổ Quản trị khi chạy quyền thường (UIPI). Bấm vào đây để nâng cấp quyền Administrator!",
+      admin_confirm_elevate: "Khởi động lại KeyMouse với quyền Administrator để điều khiển được Task Manager và các cửa sổ hệ thống?",
+      admin_restarting: "Đang khởi động lại quyền Administrator...",
     },
     en: {
       app_title: "KeyMouse Fluent Design",
@@ -1129,6 +1177,12 @@
       tag_exit: "Exit Mode",
       tag_toggle: "Toggle",
       del_hk_title: "Delete this hotkey",
+      admin_active: "Admin: Active",
+      admin_inactive: "Run as Admin",
+      admin_tip_active: "Administrator privileges granted. Full control over Task Manager & system windows.",
+      admin_tip_inactive: "Windows blocks input to Task Manager & Admin windows when running without Administrator privileges (UIPI). Click here to elevate to Administrator!",
+      admin_confirm_elevate: "Restart KeyMouse as Administrator to enable control over Task Manager and system windows?",
+      admin_restarting: "Restarting as Administrator...",
     }
   };
 
@@ -1238,6 +1292,24 @@
     } else {
       badge.classList.add("off");
       label.textContent = t("status_off");
+    }
+
+    // Admin Mode Badge
+    const adminBadge = document.getElementById("admin-badge");
+    const adminIcon = document.getElementById("admin-icon");
+    const adminText = document.getElementById("admin-text");
+    if (adminBadge) {
+      if (config.is_admin) {
+        adminBadge.className = "admin-badge active";
+        adminIcon.textContent = "🛡️";
+        adminText.textContent = t("admin_active");
+        adminBadge.title = t("admin_tip_active");
+      } else {
+        adminBadge.className = "admin-badge warning";
+        adminIcon.textContent = "⚠️";
+        adminText.textContent = t("admin_inactive");
+        adminBadge.title = t("admin_tip_inactive");
+      }
     }
 
     // Bindings Preview
@@ -1493,6 +1565,26 @@
       }
     } catch(e) {}
   }, 400);
+
+  async function requestElevate() {
+    if (config.is_admin) return;
+    if (!confirm(t("admin_confirm_elevate"))) return;
+    try {
+      const res = await fetch("/api/elevate", { method: "POST" });
+      const data = await res.json();
+      if (data.ok) {
+        document.body.innerHTML = `
+          <div style="display:flex;height:100vh;align-items:center;justify-content:center;flex-direction:column;gap:14px;color:#00d2ff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+            <div style="font-size:42px;">🛡️</div>
+            <div style="font-weight:700;font-size:16px;">${t("admin_restarting")}</div>
+          </div>
+        `;
+        setTimeout(() => window.close(), 1500);
+      }
+    } catch(e) {
+      console.error(e);
+    }
+  }
 
   loadConfig();
 </script>

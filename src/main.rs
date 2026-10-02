@@ -351,6 +351,15 @@ unsafe extern "system" {
 #[link(name = "shell32")]
 unsafe extern "system" {
     fn Shell_NotifyIconW(dw_message: u32, lp_data: *const NOTIFYICONDATAW) -> i32;
+    fn IsUserAnAdmin() -> i32;
+    fn ShellExecuteW(
+        hwnd: isize,
+        lp_operation: *const u16,
+        lp_file: *const u16,
+        lp_parameters: *const u16,
+        lp_directory: *const u16,
+        n_show_cmd: i32,
+    ) -> isize;
 }
 
 #[link(name = "kernel32")]
@@ -865,9 +874,12 @@ fn get_config_json() -> String {
         ));
     }
 
+    let is_admin = unsafe { IsUserAnAdmin() != 0 };
+
     format!(
         r#"{{
   "mouse_mode": {},
+  "is_admin": {},
   "lang": "{}",
   "min_speed": {:.1},
   "max_speed": {:.1},
@@ -890,6 +902,7 @@ fn get_config_json() -> String {
   }}
 }}"#,
         MOUSE_MODE.load(Ordering::Relaxed),
+        is_admin,
         get_lang(),
         MIN_SPEED_X10.load(Ordering::Relaxed) as f32 / 10.0,
         MAX_SPEED_X10.load(Ordering::Relaxed) as f32 / 10.0,
@@ -1064,6 +1077,37 @@ fn start_web_server() {
                     set_mouse_mode(!curr);
                     let resp = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 12\r\nConnection: close\r\n\r\n{\"ok\": true}";
                     let _ = stream.write_all(resp.as_bytes());
+                } else if method == "POST" && path == "/api/elevate" {
+                    let mut success = false;
+                    if let Ok(exe_path) = std::env::current_exe() {
+                        let exe_w = to_wstring(&exe_path.to_string_lossy());
+                        let op_w = to_wstring("runas");
+                        let res = unsafe {
+                            ShellExecuteW(
+                                0,
+                                op_w.as_ptr(),
+                                exe_w.as_ptr(),
+                                std::ptr::null(),
+                                std::ptr::null(),
+                                1,
+                            )
+                        };
+                        if res > 32 {
+                            success = true;
+                        }
+                    }
+                    let resp = format!(
+                        "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{{\"ok\": {}}}",
+                        if success { 12 } else { 13 },
+                        success
+                    );
+                    let _ = stream.write_all(resp.as_bytes());
+                    if success {
+                        std::thread::spawn(|| {
+                            std::thread::sleep(std::time::Duration::from_millis(500));
+                            std::process::exit(0);
+                        });
+                    }
                 } else if method == "GET" && path == "/api/status" {
                     let is_on = MOUSE_MODE.load(Ordering::Relaxed);
                     let json = format!("{{\"mouse_mode\": {}}}", is_on);
@@ -1848,7 +1892,35 @@ unsafe extern "system" fn tray_wnd_proc(hwnd: isize, msg: u32, w_param: usize, l
     }
 }
 
+fn check_and_request_elevation() {
+    let args: Vec<String> = std::env::args().collect();
+    let has_no_admin = args.iter().any(|a| a == "--no-admin");
+    let is_elevated_flag = args.iter().any(|a| a == "--elevated");
+
+    if !has_no_admin && !is_elevated_flag && unsafe { IsUserAnAdmin() } == 0 {
+        if let Ok(exe_path) = std::env::current_exe() {
+            let exe_w = to_wstring(&exe_path.to_string_lossy());
+            let op_w = to_wstring("runas");
+            let params_w = to_wstring("--elevated");
+            let res = unsafe {
+                ShellExecuteW(
+                    0,
+                    op_w.as_ptr(),
+                    exe_w.as_ptr(),
+                    params_w.as_ptr(),
+                    std::ptr::null(),
+                    1,
+                )
+            };
+            if res > 32 {
+                std::process::exit(0);
+            }
+        }
+    }
+}
+
 fn main() {
+    check_and_request_elevation();
     init_default_hotkeys();
     load_config();
     attach_to_default_desktop();

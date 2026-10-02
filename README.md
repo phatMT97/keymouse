@@ -64,6 +64,10 @@ Whether your physical mouse ran out of battery, you suffer from RSI/wrist fatigu
 - **🛡️ Smart Key Pass-Through**:
   - Arrow keys are never hijacked; standard typing and cursor navigation remain fully functional.
   - `Esc` key cleanly closes the settings dashboard when focused without intercepting system `Esc` actions.
+- **⚡ Administrator Mode & Task Manager Support**:
+  - Automatically requests or enables Administrator privileges to bypass Windows UIPI (User Interface Privilege Isolation).
+  - Uninterrupted keyboard capture and mouse control across all elevated applications, including **Task Manager** (even with "Always on top" enabled), Registry Editor, and Admin Terminals.
+  - Clickable "Run as Admin" badge right in the dashboard header for instant 1-click elevation.
 
 ### Default Shortcuts
 
@@ -172,6 +176,10 @@ KeyMouse mang lại cảm giác di chuột mượt mà như chuột vật lý nh
 - **🛡️ Không chiếm dụng phím ngoài ý muốn**:
   - Không can thiệp vào các phím mũi tên điều hướng mặc định của bàn phím.
   - Phím `Esc` chỉ đóng cửa sổ cài đặt khi đang tập trung (focus) vào ứng dụng, không làm ảnh hưởng đến các tác vụ hệ thống khác.
+- **⚡ Chế độ Administrator & Điều khiển Task Manager toàn diện**:
+  - Tự động phát hiện và hỗ trợ khởi động với quyền Administrator để vượt qua cơ chế bảo mật UIPI (User Interface Privilege Isolation) của Windows.
+  - Đảm bảo bắt phím và di chuột liên tục trên mọi ứng dụng hệ thống đặc quyền cao như **Task Manager** (kể cả khi bật chế độ "Luôn ở trên cùng" - Always on top), Regedit hay CMD/PowerShell Admin.
+  - Tích hợp nút kiểm tra và nâng quyền Administrator trực tiếp trên thanh tiêu đề của giao diện chỉ với 1 cú click.
 
 ### Phím tắt mặc định
 
