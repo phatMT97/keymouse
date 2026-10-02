@@ -768,7 +768,7 @@
   <!-- Main 2-Column Grid -->
   <div class="main-layout">
     
-    <!-- Left Column: Logitech GPX 2 Mouse Diagram -->
+    <!-- Left Column: Interactive Mouse Diagram -->
     <div class="card mouse-column">
       <div class="card-header" style="width: 100%;">
         <h2 data-i18n="mouse_diagram_title">Sơ Đồ Phím Chuột</h2>
@@ -1563,18 +1563,27 @@
     window.close();
   }
 
-  // Periodic poll to keep status badge in sync
+  // Periodic poll to keep status badge in sync, and automatically close window if KeyMouse backend exits
+  let backendFailCount = 0;
   setInterval(async () => {
     try {
       const res = await fetch("/api/status");
       if (res.ok) {
+        backendFailCount = 0;
         const s = await res.json();
         if (s.mouse_mode !== config.mouse_mode) {
           config.mouse_mode = s.mouse_mode;
           renderUI();
         }
+      } else {
+        backendFailCount++;
       }
-    } catch(e) {}
+    } catch(e) {
+      backendFailCount++;
+      if (backendFailCount >= 3) {
+        window.close();
+      }
+    }
   }, 400);
 
   async function requestElevate() {

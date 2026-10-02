@@ -318,6 +318,8 @@ unsafe extern "system" {
         pblend: *const BLENDFUNCTION,
         dw_flags: u32,
     ) -> i32;
+    fn GetClassNameW(hwnd: isize, lp_class_name: *mut u16, n_max_count: i32) -> i32;
+    fn EnumWindows(lp_enum_func: WNDENUMPROC, l_param: isize) -> i32;
 }
 
 #[link(name = "gdi32")]
@@ -723,13 +725,48 @@ static SPAWNED_PROCESS: AtomicIsize = AtomicIsize::new(0);
 static FOUND_HWND: AtomicIsize = AtomicIsize::new(0);
 static LAST_SPAWN_TIME: AtomicU64 = AtomicU64::new(0);
 
+unsafe extern "system" fn close_keymouse_windows_proc(hwnd: isize, _lparam: isize) -> i32 {
+    unsafe {
+        let mut class_buf = [0u16; 256];
+        let class_len = GetClassNameW(hwnd, class_buf.as_mut_ptr(), 256);
+        let class_name = if class_len > 0 {
+            String::from_utf16_lossy(&class_buf[..class_len as usize])
+        } else {
+            String::new()
+        };
+
+        let mut buf = [0u16; 512];
+        let len = GetWindowTextW(hwnd, buf.as_mut_ptr(), 512);
+        if len > 0 {
+            let title = String::from_utf16_lossy(&buf[..len as usize]);
+            if (class_name == "Chrome_WidgetWin_1" || title.contains("KeyMouse -"))
+                && (title.contains("KeyMouse") || title.contains("127.0.0.1"))
+                && !title.contains("KeyMouseHost")
+                && !title.contains("Toast")
+                && !title.contains("KM_")
+            {
+                PostMessageW(hwnd, WM_CLOSE, 0, 0);
+            }
+        }
+        1
+    }
+}
+
 fn close_fluent_ui() {
+    // 1. Post WM_CLOSE directly to cached UI_HWND
     let ui = UI_HWND.swap(0, Ordering::SeqCst);
     if ui != 0 && unsafe { IsWindow(ui) } != 0 {
         unsafe {
             PostMessageW(ui, WM_CLOSE, 0, 0);
         }
     }
+
+    // 2. Broadcast WM_CLOSE to all desktop windows matching KeyMouse UI
+    unsafe {
+        EnumWindows(close_keymouse_windows_proc, 0);
+    }
+
+    // 3. Terminate process handle if still open
     let hproc = SPAWNED_PROCESS.swap(0, Ordering::SeqCst);
     if hproc != 0 {
         unsafe {
@@ -737,6 +774,8 @@ fn close_fluent_ui() {
             CloseHandle(hproc);
         }
     }
+
+    // 4. Force kill tracked process tree via taskkill
     let pid = SPAWNED_PID.swap(0, Ordering::SeqCst);
     if pid != 0 {
         #[cfg(windows)]
@@ -748,6 +787,22 @@ fn close_fluent_ui() {
                 .output();
         }
     }
+
+    // 5. Clean up any Edge process specifically running our isolated edge_profile
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        let _ = std::process::Command::new("powershell")
+            .args(&[
+                "-NoProfile",
+                "-NonInteractive",
+                "-WindowStyle", "Hidden",
+                "-Command",
+                "Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*KeyMouse*edge_profile*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }",
+            ])
+            .creation_flags(0x08000000)
+            .output();
+    }
 }
 
 unsafe extern "system" fn enum_desktop_windows_proc(hwnd: isize, lparam: isize) -> i32 {
@@ -756,17 +811,28 @@ unsafe extern "system" fn enum_desktop_windows_proc(hwnd: isize, lparam: isize) 
         let mut proc_id = 0u32;
         GetWindowThreadProcessId(hwnd, &mut proc_id);
 
-        // STRICT MATCH: Only inspect windows created by OUR exact spawned Edge process!
-        // Never touch the user's personal browser or other application windows!
-        if target_pid != 0 && proc_id != target_pid {
-            return 1;
-        }
+        let mut class_buf = [0u16; 256];
+        let class_len = GetClassNameW(hwnd, class_buf.as_mut_ptr(), 256);
+        let class_name = if class_len > 0 {
+            String::from_utf16_lossy(&class_buf[..class_len as usize])
+        } else {
+            String::new()
+        };
 
         let mut buf = [0u16; 512];
         let len = GetWindowTextW(hwnd, buf.as_mut_ptr(), 512);
         if len > 0 {
             let title = String::from_utf16_lossy(&buf[..len as usize]);
-            if !title.contains("KeyMouseHost") && !title.contains("Toast") && !title.contains("KM_") {
+            // Match our KeyMouse UI app window:
+            // Must have Chrome_WidgetWin_1 class OR match target_pid,
+            // and must contain "KeyMouse" or "127.0.0.1", but NOT our internal host/toast windows.
+            if (class_name == "Chrome_WidgetWin_1" || target_pid == 0 || proc_id == target_pid)
+                && (title.contains("KeyMouse") || title.contains("127.0.0.1"))
+                && !title.contains("KeyMouseHost")
+                && !title.contains("Toast")
+                && !title.contains("KM_")
+            {
+                SPAWNED_PID.store(proc_id, Ordering::SeqCst);
                 FOUND_HWND.store(hwnd, Ordering::SeqCst);
                 return 0; // stop enumeration
             }
@@ -2112,5 +2178,7 @@ fn main() {
         }
 
         Shell_NotifyIconW(NIM_DELETE, &nid);
+        close_fluent_ui();
+        std::process::exit(0);
     }
 }

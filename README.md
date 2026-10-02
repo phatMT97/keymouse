@@ -52,7 +52,7 @@ Whether your physical mouse ran out of battery, you suffer from RSI/wrist fatigu
 - **🎨 Windows 11 Fluent Design Dashboard**:
   - Embedded local micro-server (`127.0.0.1:28888`) launched as a native Microsoft Edge App window (`--app`).
   - Dark glassmorphism with acrylic blur effects.
-  - Interactive mouse diagram (Logitech G Pro X Superlight 2 wireframe) with dynamic SVG leader lines mapping keyboard keys to physical mouse buttons.
+  - Interactive ergonomic mouse diagram with dynamic SVG leader lines mapping keyboard keys to physical mouse buttons.
   - Visual D-Pad with live WASD movement feedback.
   - Interactive Hotkey Recorder for quick customization.
 - **🌐 1-Click Bilingual Support**:
@@ -164,7 +164,7 @@ KeyMouse mang lại cảm giác di chuột mượt mà như chuột vật lý nh
 - **🎨 Giao diện Fluent Design Windows 11**:
   - Tích hợp micro-server cục bộ (`127.0.0.1:28888`) mở dưới dạng ứng dụng Edge App Mode độc lập (`--app`).
   - Hiệu ứng Mica/Acrylic Dark Mode hiện đại, sang trọng.
-  - Sơ đồ chuột Logitech G Pro X Superlight 2 tương tác với các đường chỉ dẫn SVG nối trực tiếp phím gán vào từng nút chuột.
+  - Sơ đồ chuột trực quan tương tác với các đường chỉ dẫn SVG nối trực tiếp phím gán vào từng nút chuột.
   - Cụm D-Pad hiển thị trực quan chuyển động WASD theo thời gian thực.
   - Bộ ghi phím tắt (Hotkey Recorder) trực quan, đổi phím chỉ với một lần nhấn.
 - **🌐 Song ngữ Anh - Việt tiện lợi**:
