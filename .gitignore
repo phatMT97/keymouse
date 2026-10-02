@@ -5,3 +5,5 @@
 
 # Local user configuration
 keymouse_config.json
+*.exe
+
