@@ -1,0 +1,63 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-release:
+    name: Build & Publish Release (Windows x64)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build release binary
+        run: cargo build --release --locked
+
+      - name: Prepare release package
+        id: package
+        shell: pwsh
+        run: |
+          $tag = if ($env:GITHUB_REF_TYPE -eq 'tag') { $env:GITHUB_REF_NAME } else { 'latest' }
+          $zipName = "keymouse-$tag-windows-x64.zip"
+          
+          New-Item -ItemType Directory -Force -Path package
+          Copy-Item target/release/keymouse.exe package/
+          Copy-Item keymouse_config.example.json package/
+          Copy-Item README.md package/
+          Copy-Item LICENSE package/
+          
+          Compress-Archive -Path package/* -DestinationPath $zipName
+          
+          # Compute SHA256 checksums
+          $hashExe = (Get-FileHash -Path target/release/keymouse.exe -Algorithm SHA256).Hash
+          $hashZip = (Get-FileHash -Path $zipName -Algorithm SHA256).Hash
+          
+          Set-Content -Path "target/release/keymouse.exe.sha256" -Value "$hashExe  keymouse.exe"
+          Set-Content -Path "$zipName.sha256" -Value "$hashZip  $zipName"
+          
+          echo "zip_name=$zipName" >> $env:GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          name: KeyMouse ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            target/release/keymouse.exe
+            target/release/keymouse.exe.sha256
+            ${{ steps.package.outputs.zip_name }}
+            ${{ steps.package.outputs.zip_name }}.sha256
