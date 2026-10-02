@@ -1,0 +1,7 @@
+# Rust build artifacts
+/target/
+**/*.rs.bk
+*.pdb
+
+# Local user configuration
+keymouse_config.json

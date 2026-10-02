@@ -1,0 +1,24 @@
+{
+  "mouse_mode": true,
+  "lang": "en",
+  "min_speed": 0.8,
+  "max_speed": 8.0,
+  "accel_ms": 450,
+  "turbo_mult": 2.0,
+  "enable_beep": true,
+  "toast_pos": "top-center",
+  "hotkeys": [
+    {"combo": "F8", "enabled": true, "action": "toggle"},
+    {"combo": "Esc", "enabled": true, "action": "exit"}
+  ],
+  "bindings": {
+    "lclick": "Space",
+    "rclick": "X",
+    "scroll_up": "Q",
+    "scroll_down": "E",
+    "up": "W",
+    "down": "S",
+    "left": "A",
+    "right": "D"
+  }
+}

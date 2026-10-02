@@ -1,0 +1,1500 @@
+<!DOCTYPE html>
+<html lang="vi" translate="no" class="notranslate">
+<head>
+<meta charset="UTF-8">
+<meta name="google" content="notranslate">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KeyMouse - Điều Khiển Chuột Bằng Bàn Phím</title>
+<link rel="icon" type="image/png" sizes="256x256" href="/icon-256.png">
+<link rel="icon" type="image/png" sizes="64x64" href="/icon-64.png">
+<link rel="shortcut icon" href="/favicon.ico">
+<link rel="apple-touch-icon" href="/icon-256.png">
+<style>
+  :root {
+    --bg-base: #0b0d13;
+    --bg-card: rgba(19, 22, 33, 0.88);
+    --bg-card-hover: rgba(26, 30, 46, 0.95);
+    --border: rgba(255, 255, 255, 0.08);
+    --border-hover: rgba(0, 210, 255, 0.45);
+    --cyan: #00d2ff;
+    --cyan-glow: rgba(0, 210, 255, 0.35);
+    --green: #10b981;
+    --green-glow: rgba(16, 185, 129, 0.35);
+    --amber: #f59e0b;
+    --amber-glow: rgba(245, 158, 11, 0.35);
+    --rose: #f43f5e;
+    --text-main: #f3f4f6;
+    --text-muted: #9ca3af;
+    --text-dim: #6b7280;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+
+  html, body {
+    width: 860px;
+    height: 620px;
+    min-width: 860px;
+    max-width: 860px;
+    min-height: 620px;
+    max-height: 620px;
+    overflow: hidden;
+  }
+
+  body {
+    background: radial-gradient(circle at 50% 0%, #171c2c 0%, var(--bg-base) 80%);
+    color: var(--text-main);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI", Roboto, sans-serif;
+    padding: 12px 18px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .title-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo-icon {
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg, var(--cyan), #6366f1);
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 12px var(--cyan-glow);
+  }
+
+  .logo-icon svg { width: 18px; height: 18px; fill: white; }
+
+  .title-text h1 { font-size: 16px; font-weight: 700; letter-spacing: -0.2px; }
+  .title-text p { font-size: 11px; color: var(--text-muted); }
+
+  /* Status Toggle Badge */
+  .status-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg-card);
+    padding: 6px 14px;
+    border-radius: 30px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .status-badge:hover {
+    border-color: var(--border-hover);
+    transform: translateY(-1px);
+  }
+  .status-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 10px var(--green);
+    transition: all 0.3s;
+  }
+  .status-badge.off .status-dot {
+    background: var(--amber);
+    box-shadow: 0 0 10px var(--amber);
+  }
+  .status-text {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+
+  /* Header Controls & Language Switcher */
+  .header-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .lang-switch {
+    display: flex;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 3px;
+    gap: 3px;
+  }
+
+  .lang-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .lang-btn:hover {
+    color: var(--text-main);
+  }
+
+  .lang-btn.active {
+    background: var(--cyan);
+    color: #0b0d13;
+    box-shadow: 0 0 10px var(--cyan-glow);
+  }
+
+  /* Main Layout Grid */
+  .main-layout {
+    display: grid;
+    grid-template-columns: 390px 1fr;
+    gap: 14px;
+    flex: 1;
+    margin-top: 10px;
+    min-height: 0;
+  }
+
+  /* Card */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 12px 14px;
+    backdrop-filter: blur(20px);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    flex-shrink: 0;
+  }
+  .card-header h2 {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--cyan);
+  }
+
+  /* Left Column: Mouse Diagram Card */
+  .mouse-column {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .diagram-viewport {
+    position: relative;
+    width: 100%;
+    height: 290px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* SVG Mouse (Logitech G Pro X Superlight 2) */
+  .svg-mouse {
+    width: 190px;
+    height: 280px;
+    filter: drop-shadow(0 12px 28px rgba(0,0,0,0.9)) drop-shadow(0 0 18px rgba(0, 210, 255, 0.18));
+    z-index: 2;
+  }
+
+  .mouse-part {
+    transition: all 0.2s ease;
+    cursor: pointer;
+  }
+  .mouse-part:hover, .mouse-part.active {
+    filter: brightness(1.3) drop-shadow(0 0 8px var(--cyan));
+  }
+
+  /* Callout Badges */
+  .callout-badge {
+    position: absolute;
+    background: rgba(17, 20, 31, 0.94);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 9px;
+    padding: 5px 9px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.6);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 10;
+  }
+
+  .callout-badge:hover {
+    border-color: var(--cyan);
+    box-shadow: 0 0 16px var(--cyan-glow);
+    transform: scale(1.04);
+  }
+
+  .callout-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-muted);
+  }
+
+  .key-cap {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    padding: 2px 7px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #fff;
+    box-shadow: 0 2px 0 rgba(0,0,0,0.4);
+    font-family: monospace;
+  }
+
+  /* Exact Callout Coordinates */
+  #callout-left-click   { top: 22px; left: 6px; }
+  #callout-right-click  { top: 22px; right: 6px; }
+  #callout-scroll-up    { top: 2px; left: 50%; transform: translateX(-50%); }
+  #callout-scroll-down  { top: 78px; right: 6px; }
+  #callout-turbo        { top: 100px; left: 6px; }
+  #callout-sniper       { top: 148px; left: 6px; }
+
+  /* SVG Leader Lines */
+  .leader-lines {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 1;
+  }
+  .leader-lines line, .leader-lines path {
+    stroke: rgba(0, 210, 255, 0.45);
+    stroke-width: 1.2;
+    stroke-dasharray: 3 3;
+  }
+
+  /* D-Pad Movement Cluster */
+  .dpad-cluster {
+    width: 100%;
+    background: rgba(14, 16, 24, 0.7);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .dpad-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .dpad-title { font-size: 11px; font-weight: 700; color: var(--cyan); letter-spacing: 0.5px; }
+  .dpad-sub { font-size: 10px; color: var(--text-dim); }
+
+  .dpad-keys {
+    display: grid;
+    grid-template-areas:
+      ".    up   ."
+      "left down right";
+    gap: 4px;
+    justify-items: center;
+  }
+
+  .dpad-btn {
+    width: 28px;
+    height: 26px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-main);
+    cursor: pointer;
+    box-shadow: 0 2px 0 rgba(0,0,0,0.5);
+    transition: all 0.15s;
+  }
+  .dpad-btn:hover {
+    border-color: var(--cyan);
+    box-shadow: 0 0 10px var(--cyan-glow);
+    transform: translateY(-1px);
+    background: rgba(0, 210, 255, 0.15);
+  }
+  .dpad-btn.active {
+    background: var(--cyan);
+    color: #000;
+    box-shadow: 0 0 12px var(--cyan);
+  }
+  .dpad-up    { grid-area: up; }
+  .dpad-down  { grid-area: down; }
+  .dpad-left  { grid-area: left; }
+  .dpad-right { grid-area: right; }
+
+  /* Right Column: Settings */
+  .right-column {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 0;
+  }
+
+  /* Hotkeys Card */
+  .hotkey-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 180px;
+    overflow-y: auto;
+    padding-right: 6px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 210, 255, 0.4) rgba(255, 255, 255, 0.03);
+  }
+
+  /* Sleek Modern Fluent Scrollbar */
+  .hotkey-list::-webkit-scrollbar {
+    width: 5px;
+  }
+  .hotkey-list::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 10px;
+    margin: 3px 0;
+  }
+  .hotkey-list::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, rgba(0, 210, 255, 0.45), rgba(99, 102, 241, 0.45));
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: all 0.2s ease;
+  }
+  .hotkey-list::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, var(--cyan), #6366f1);
+    box-shadow: 0 0 10px var(--cyan-glow);
+  }
+
+  .hotkey-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 7px 10px;
+    transition: all 0.2s ease;
+  }
+  .hotkey-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.16);
+  }
+  .hotkey-item.disabled {
+    opacity: 0.55;
+  }
+
+  .hotkey-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  /* Custom Checkbox */
+  .chk-wrap {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+  }
+  .chk-wrap input { display: none; }
+  .chk-custom {
+    width: 17px;
+    height: 17px;
+    border-radius: 5px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    background: rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+  .chk-wrap input:checked + .chk-custom {
+    background: var(--cyan);
+    border-color: var(--cyan);
+  }
+  .chk-custom svg {
+    width: 11px;
+    height: 11px;
+    stroke: #000;
+    stroke-width: 3;
+    fill: none;
+    display: none;
+  }
+  .chk-wrap input:checked + .chk-custom svg { display: block; }
+
+  .hotkey-keys {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .hotkey-tag {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.06);
+    color: var(--text-dim);
+    margin-left: 6px;
+  }
+
+  .btn-del-hotkey {
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-del-hotkey:hover {
+    background: rgba(244, 63, 94, 0.15);
+    color: var(--rose);
+  }
+
+  .btn-add-hotkey {
+    background: rgba(0, 210, 255, 0.08);
+    border: 1px dashed rgba(0, 210, 255, 0.35);
+    border-radius: 8px;
+    color: var(--cyan);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 7px;
+    width: 100%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 6px;
+    transition: all 0.2s;
+  }
+  .btn-add-hotkey:hover {
+    background: rgba(0, 210, 255, 0.16);
+    border-color: var(--cyan);
+  }
+
+  /* DPI & Physics Card */
+  .sliders-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 14px;
+  }
+
+  .slider-item {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .slider-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+  }
+  .slider-label { color: var(--text-muted); font-weight: 500; }
+  .slider-val { color: var(--cyan); font-weight: 700; font-family: monospace; }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 2px;
+    outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--cyan);
+    box-shadow: 0 0 8px var(--cyan);
+    cursor: pointer;
+    transition: transform 0.1s;
+  }
+  input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+  }
+
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  /* Switch */
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 32px;
+    height: 18px;
+  }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider-sw {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(255,255,255,0.15);
+    border-radius: 18px;
+    transition: 0.2s;
+  }
+  .slider-sw:before {
+    position: absolute;
+    content: "";
+    height: 12px;
+    width: 12px;
+    left: 3px;
+    bottom: 3px;
+    background: white;
+    border-radius: 50%;
+    transition: 0.2s;
+  }
+  input:checked + .slider-sw { background: var(--cyan); }
+  input:checked + .slider-sw:before { transform: translateX(14px); }
+
+  /* Footer Actions */
+  .footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .btn {
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+    border: none;
+  }
+  .btn-secondary {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--text-main);
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--cyan), #3b82f6);
+    color: #000;
+    box-shadow: 0 2px 10px var(--cyan-glow);
+    font-weight: 700;
+  }
+  .btn-primary:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+  }
+
+  /* Modal Recorder */
+  .modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(8px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+  .modal-overlay.active { display: flex; }
+
+  .modal-box {
+    background: #141724;
+    border: 1px solid var(--border-hover);
+    border-radius: 16px;
+    padding: 22px 26px;
+    width: 380px;
+    text-align: center;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.8), 0 0 30px var(--cyan-glow);
+  }
+
+  .modal-title { font-size: 15px; font-weight: 700; margin-bottom: 6px; color: var(--text-main); }
+  .modal-sub { font-size: 12px; color: var(--text-muted); margin-bottom: 16px; }
+
+  .key-recorder-box {
+    background: rgba(0,0,0,0.4);
+    border: 2px dashed rgba(0, 210, 255, 0.4);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+    min-height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .modal-btns {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  /* Custom Dropdown Select */
+  .custom-select {
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    color: var(--cyan);
+    padding: 3px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    outline: none;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .custom-select:hover, .custom-select:focus {
+    border-color: var(--cyan);
+    background: rgba(0, 210, 255, 0.1);
+  }
+  .custom-select option {
+    background: #141724;
+    color: #fff;
+  }
+</style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="title-group">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9v6c0 3.87 3.13 7 7 7s7-3.13 7-7V9c0-3.87-3.13-7-7-7zm5 13c0 2.76-2.24 5-5 5s-5-2.24-5-5V9c0-2.76 2.24-5 5-5s5 2.24 5 5v6z"/><path d="M12 6c-.55 0-1 .45-1 1v4c0 .55.45 1 1 1s1-.45 1-1V7c0-.55-.45-1-1-1z"/></svg>
+      </div>
+      <div class="title-text">
+        <h1 data-i18n="app_title">KeyMouse Fluent Design</h1>
+        <p data-i18n="app_desc">Điều khiển chuột mượt mà bằng bàn phím trên Windows 11</p>
+      </div>
+    </div>
+
+    <!-- Header Controls: Language Switcher & Status Badge -->
+    <div class="header-controls">
+      <div class="lang-switch">
+        <button class="lang-btn active" id="btn-lang-vi" onclick="setLanguage('vi')">VI</button>
+        <button class="lang-btn" id="btn-lang-en" onclick="setLanguage('en')">EN</button>
+      </div>
+
+      <!-- Toggle Status Badge -->
+      <div class="status-badge" id="status-toggle-btn" onclick="toggleMouseMode()">
+        <div class="status-dot"></div>
+        <span class="status-text" id="status-label" data-i18n="status_on">ĐANG BẬT</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main 2-Column Grid -->
+  <div class="main-layout">
+    
+    <!-- Left Column: Logitech GPX 2 Mouse Diagram -->
+    <div class="card mouse-column">
+      <div class="card-header" style="width: 100%;">
+        <h2 data-i18n="mouse_diagram_title">Sơ Đồ Phím Chuột</h2>
+        <span data-i18n="mouse_diagram_sub" style="font-size: 10px; color: var(--text-dim);">Nhấp vào nút để đổi phím</span>
+      </div>
+
+      <div class="diagram-viewport">
+        <!-- SVG Leader Lines -->
+        <svg class="leader-lines" viewBox="0 0 390 290">
+          <!-- Left Click Line: badge (85, 36) -> elbow (118, 48) -> mouse button (148, 68) -->
+          <path d="M 85,36 L 118,48 L 148,68"/>
+          <!-- Right Click Line: badge (305, 36) -> elbow (272, 48) -> mouse button (242, 68) -->
+          <path d="M 305,36 L 272,48 L 242,68"/>
+          <!-- Scroll Up Line: badge (195, 24) -> wheel top (195, 51) -->
+          <line x1="195" y1="24" x2="195" y2="51"/>
+          <!-- Scroll Down Line: badge (295, 92) -> elbow (248, 92) -> wheel bottom (205, 84) -->
+          <path d="M 295,92 L 248,92 L 205,84"/>
+          <!-- Turbo Line: badge (84, 114) -> M5 button (119, 117) -->
+          <line x1="84" y1="114" x2="119" y2="117"/>
+          <!-- Sniper Line: badge (84, 162) -> M4 button (120, 157) -->
+          <line x1="84" y1="162" x2="120" y2="157"/>
+        </svg>
+
+        <!-- Callouts -->
+        <!-- Chuột Trái -->
+        <div class="callout-badge" id="callout-left-click" onclick="recordTarget('lclick', t('left_click'))">
+          <span class="callout-label" data-i18n="left_click">Chuột Trái</span>
+          <span class="key-cap" id="val-lclick">Space</span>
+        </div>
+
+        <!-- Chuột Phải -->
+        <div class="callout-badge" id="callout-right-click" onclick="recordTarget('rclick', t('right_click'))">
+          <span class="callout-label" data-i18n="right_click">Chuột Phải</span>
+          <span class="key-cap" id="val-rclick">X</span>
+        </div>
+
+        <!-- Cuộn Lên -->
+        <div class="callout-badge" id="callout-scroll-up" onclick="recordTarget('scroll_up', t('scroll_up'))">
+          <span class="callout-label" data-i18n="scroll_up">▲ Cuộn Lên</span>
+          <span class="key-cap" id="val-scroll-up">E</span>
+        </div>
+
+        <!-- Cuộn Xuống -->
+        <div class="callout-badge" id="callout-scroll-down" onclick="recordTarget('scroll_down', t('scroll_down'))">
+          <span class="callout-label" data-i18n="scroll_down">▼ Cuộn Xuống</span>
+          <span class="key-cap" id="val-scroll-down">Q</span>
+        </div>
+
+        <!-- Turbo -->
+        <div class="callout-badge" id="callout-turbo" title="Turbo 2x">
+          <span class="callout-label" data-i18n="turbo">🚀 Turbo</span>
+          <span class="key-cap">Shift</span>
+        </div>
+
+        <!-- Bắn Tỉa -->
+        <div class="callout-badge" id="callout-sniper" title="Sniper 1px">
+          <span class="callout-label" data-i18n="sniper">🎯 Bắn Tỉa</span>
+          <span class="key-cap">Ctrl</span>
+        </div>
+
+        <!-- Logitech G Pro X Superlight 2 Vector SVG (Accurate Plump Ergonomic Shape) -->
+        <svg class="svg-mouse" viewBox="0 0 200 316" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <!-- Base Shell Gradient -->
+            <linearGradient id="gpxBody" x1="100" y1="16" x2="100" y2="308" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#252a3d"/>
+              <stop offset="45%" stop-color="#161824"/>
+              <stop offset="100%" stop-color="#0e1017"/>
+            </linearGradient>
+
+            <!-- Clicker Button Gradient -->
+            <linearGradient id="gpxButton" x1="100" y1="16" x2="100" y2="155" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#2d334a"/>
+              <stop offset="100%" stop-color="#181b28"/>
+            </linearGradient>
+
+            <!-- Side Button Gradient -->
+            <linearGradient id="gpxSideBtn" x1="21" y1="118" x2="30" y2="118" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#00d2ff"/>
+              <stop offset="40%" stop-color="#3b435d"/>
+              <stop offset="100%" stop-color="#151722"/>
+            </linearGradient>
+          </defs>
+
+          <!-- Side Buttons (Protruding on left contour) -->
+          <!-- M5 (Forward / Turbo) -->
+          <rect id="m5-btn" x="21" y="116" width="8" height="32" rx="4" fill="url(#gpxSideBtn)" stroke="#00d2ff" stroke-width="0.9" class="mouse-part"/>
+          <!-- M4 (Back / Sniper) -->
+          <rect id="m4-btn" x="22" y="154" width="8" height="34" rx="4" fill="url(#gpxSideBtn)" stroke="#ec4899" stroke-width="0.9" class="mouse-part"/>
+
+          <!-- Main Shell Base Contour (Fuller, Plump Logitech Superlight 2) -->
+          <path d="M 100,16 
+                   C 70,16 42,34 32,65 
+                   C 24,90 22,125 28,160 
+                   C 31,180 32,195 29,215 
+                   C 25,238 28,268 46,288 
+                   C 64,304 84,308 100,308 
+                   C 116,308 136,304 154,288 
+                   C 172,268 175,238 171,215 
+                   C 168,195 169,180 172,160 
+                   C 178,125 176,90 168,65 
+                   C 158,34 130,16 100,16 Z" 
+                fill="url(#gpxBody)" stroke="rgba(255, 255, 255, 0.16)" stroke-width="1.5"/>
+
+          <!-- Left Click Button Plate -->
+          <path id="svg-lclick" d="M 100,16 
+                   C 70,16 42,34 32,65 
+                   C 24,90 23,122 28,155 
+                   C 52,162 76,162 99,155 
+                   L 99,106 
+                   C 90,106 89,98 89,90 
+                   L 89,56 
+                   C 89,49 92,48 99,48 
+                   L 99,16 Z" 
+                fill="url(#gpxButton)" stroke="rgba(255,255,255,0.08)" stroke-width="1" class="mouse-part"
+                onclick="recordTarget('lclick', t('left_click'))"/>
+
+          <!-- Right Click Button Plate -->
+          <path id="svg-rclick" d="M 100,16 
+                   C 130,16 158,34 168,65 
+                   C 176,90 177,122 172,155 
+                   C 148,162 124,162 101,155 
+                   L 101,106 
+                   C 110,106 111,98 111,90 
+                   L 111,56 
+                   C 111,49 108,48 101,48 
+                   L 101,16 Z" 
+                fill="url(#gpxButton)" stroke="rgba(255,255,255,0.08)" stroke-width="1" class="mouse-part"
+                onclick="recordTarget('rclick', t('right_click'))"/>
+
+          <!-- Subtle Finger Ergonomic Grooves -->
+          <ellipse cx="64" cy="90" rx="18" ry="36" fill="rgba(255,255,255,0.02)" transform="rotate(-6 64 90)"/>
+          <ellipse cx="136" cy="90" rx="18" ry="36" fill="rgba(255,255,255,0.02)" transform="rotate(6 136 90)"/>
+
+          <!-- Seam Lines -->
+          <line x1="100" y1="16" x2="100" y2="48" stroke="#0b0d13" stroke-width="2"/>
+          <line x1="100" y1="106" x2="100" y2="155" stroke="#0b0d13" stroke-width="2"/>
+          <path d="M 28,155 Q 64,162 100,155 Q 136,162 172,155" fill="none" stroke="#0b0d13" stroke-width="2"/>
+
+          <!-- Recessed Wheel Well -->
+          <rect x="89" y="47" width="22" height="60" rx="11" fill="#090a10" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+
+          <!-- Scroll Wheel -->
+          <g id="svg-scroll">
+            <rect x="93" y="52" width="14" height="50" rx="7" fill="#141722" stroke="#00d2ff" stroke-width="1.2"/>
+            <rect x="98" y="54" width="4" height="46" rx="2" fill="#00d2ff" opacity="0.6"/>
+            <!-- Wheel Texture Ribs -->
+            <line x1="93" y1="59" x2="107" y2="59" stroke="#2e354d" stroke-width="1.5"/>
+            <line x1="93" y1="65" x2="107" y2="65" stroke="#2e354d" stroke-width="1.5"/>
+            <line x1="93" y1="71" x2="107" y2="71" stroke="#2e354d" stroke-width="1.5"/>
+            <line x1="93" y1="77" x2="107" y2="77" stroke="#2e354d" stroke-width="1.5"/>
+            <line x1="93" y1="83" x2="107" y2="83" stroke="#2e354d" stroke-width="1.5"/>
+            <line x1="93" y1="89" x2="107" y2="89" stroke="#2e354d" stroke-width="1.5"/>
+            <line x1="93" y1="95" x2="107" y2="95" stroke="#2e354d" stroke-width="1.5"/>
+            <!-- Separate Clickable Hitboxes for Scroll Up & Down -->
+            <rect id="svg-scroll-up" class="mouse-part" x="91" y="50" width="18" height="26" fill="transparent"
+                  onclick="recordTarget('scroll_up', t('scroll_up'))" title="Scroll Up"/>
+            <rect id="svg-scroll-down" class="mouse-part" x="91" y="76" width="18" height="26" fill="transparent"
+                  onclick="recordTarget('scroll_down', t('scroll_down'))" title="Scroll Down"/>
+          </g>
+
+          <!-- Palm Base Highlight Accent -->
+          <path d="M 58,284 C 72,298 86,301 100,301 C 114,301 128,298 142,284" fill="none" stroke="rgba(0, 210, 255, 0.22)" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+
+      <!-- D-Pad Movement Cluster -->
+      <div class="dpad-cluster">
+        <div class="dpad-info">
+          <span class="dpad-title" data-i18n="dpad_title">CỤM DI CHUYỂN CON TRỎ</span>
+          <span class="dpad-sub" data-i18n="dpad_sub">Nhấp phím để gán hướng</span>
+        </div>
+        <div class="dpad-keys">
+          <div class="dpad-btn dpad-up" id="btn-up" onclick="recordTarget('up', t('dpad_up'))" title="Up">W</div>
+          <div class="dpad-btn dpad-left" id="btn-left" onclick="recordTarget('left', t('dpad_left'))" title="Left">A</div>
+          <div class="dpad-btn dpad-down" id="btn-down" onclick="recordTarget('down', t('dpad_down'))" title="Down">S</div>
+          <div class="dpad-btn dpad-right" id="btn-right" onclick="recordTarget('right', t('dpad_right'))" title="Right">D</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Settings & Hotkeys -->
+    <div class="right-column">
+      
+      <!-- Card: Hotkey Manager -->
+      <div class="card" style="flex: 1.1;">
+        <div class="card-header">
+          <h2 data-i18n="hotkeys_title">Phím Tắt Bật / Tắt (Hotkeys)</h2>
+          <span data-i18n="hotkeys_sub" style="font-size: 10px; color: var(--text-dim);">Có thể thêm / xoá tự do</span>
+        </div>
+
+        <!-- Dynamic Hotkey List -->
+        <div class="hotkey-list" id="hotkey-container">
+          <!-- Rendered via JS -->
+        </div>
+
+        <!-- Add Hotkey Button -->
+        <button class="btn-add-hotkey" onclick="startAddHotkey()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <span data-i18n="add_hotkey_btn">Thêm phím tắt / tổ hợp mới...</span>
+        </button>
+      </div>
+
+      <!-- Card: DPI & Smooth Physics -->
+      <div class="card" style="flex: 1;">
+        <div class="card-header">
+          <h2 data-i18n="speed_title">Độ Nhạy & Gia Tốc (DPI)</h2>
+        </div>
+
+        <div class="sliders-grid">
+          <!-- Min Speed -->
+          <div class="slider-item">
+            <div class="slider-header">
+              <span class="slider-label" data-i18n="min_speed">Tốc độ chạm nhẹ (Min)</span>
+              <span class="slider-val" id="val-min-speed">0.7 px</span>
+            </div>
+            <input type="range" id="rng-min-speed" min="0.2" max="2.0" step="0.1" value="0.7" oninput="onSpeedChange()">
+          </div>
+
+          <!-- Max Speed -->
+          <div class="slider-item">
+            <div class="slider-header">
+              <span class="slider-label" data-i18n="max_speed">Tốc độ tối đa (Max)</span>
+              <span class="slider-val" id="val-max-speed">7.5 px</span>
+            </div>
+            <input type="range" id="rng-max-speed" min="3.0" max="18.0" step="0.5" value="7.5" oninput="onSpeedChange()">
+          </div>
+
+          <!-- Accel Time -->
+          <div class="slider-item">
+            <div class="slider-header">
+              <span class="slider-label" data-i18n="accel_time">Thời gian gia tốc</span>
+              <span class="slider-val" id="val-accel">450 ms</span>
+            </div>
+            <input type="range" id="rng-accel" min="150" max="900" step="25" value="450" oninput="onSpeedChange()">
+          </div>
+
+          <!-- Turbo Multiplier -->
+          <div class="slider-item">
+            <div class="slider-header">
+              <span class="slider-label" data-i18n="turbo_mult">Hệ số Turbo (Shift)</span>
+              <span class="slider-val" id="val-turbo">2.0x</span>
+            </div>
+            <input type="range" id="rng-turbo" min="1.5" max="4.0" step="0.25" value="2.0" oninput="onSpeedChange()">
+          </div>
+        </div>
+
+        <div class="toggle-row">
+          <span data-i18n="beep_toggle">🔊 Âm thanh bíp báo hiệu khi Bật/Tắt</span>
+          <label class="switch">
+            <input type="checkbox" id="chk-beep" onchange="onBeepChange()">
+            <span class="slider-sw"></span>
+          </label>
+        </div>
+
+        <div class="toggle-row">
+          <span data-i18n="toast_pos">🔔 Vị trí Toast Thông Báo (OSD)</span>
+          <select id="sel-toast-pos" class="custom-select" onchange="onToastPosChange()">
+            <option value="top-center" data-i18n="pos_top_center">Trên cùng - Giữa (Mặc định)</option>
+            <option value="top-right" data-i18n="pos_top_right">Trên cùng - Góc phải</option>
+            <option value="top-left" data-i18n="pos_top_left">Trên cùng - Góc trái</option>
+            <option value="bottom-center" data-i18n="pos_bottom_center">Dưới cùng - Giữa (Taskbar)</option>
+            <option value="bottom-right" data-i18n="pos_bottom_right">Dưới cùng - Góc phải</option>
+            <option value="bottom-left" data-i18n="pos_bottom_left">Dưới cùng - Góc trái</option>
+          </select>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Bottom Toolbar -->
+  <div class="footer">
+    <button class="btn btn-secondary" onclick="resetDefaults()">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+      <span data-i18n="btn_reset">Khôi phục mặc định</span>
+    </button>
+    <div style="font-size: 11px; color: var(--text-dim);" data-i18n="tray_hint">
+      Đúp chuột vào icon Khay để mở lại bất cứ lúc nào
+    </div>
+    <button class="btn btn-primary" onclick="minimizeToTray()">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+      <span data-i18n="btn_minimize">Thu nhỏ vào Khay (Tray)</span>
+    </button>
+  </div>
+
+  <!-- Key Recording Modal -->
+  <div class="modal-overlay" id="record-modal">
+    <div class="modal-box">
+      <div class="modal-title" id="modal-target-title">Gán phím</div>
+      <div class="modal-sub" data-i18n="modal_sub">Bấm phím hoặc tổ hợp phím bạn muốn gán trên bàn phím:</div>
+      <div class="key-recorder-box" id="modal-key-preview">
+        <span class="key-cap" data-i18n="modal_waiting">Chờ phím bấm...</span>
+      </div>
+      <div class="modal-btns">
+        <button class="btn btn-secondary" onclick="closeModal()" data-i18n="modal_cancel">Huỷ bỏ (Esc)</button>
+        <button class="btn btn-primary" onclick="confirmRecordedKey()" data-i18n="modal_confirm">Xác nhận (Enter)</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const I18N = {
+    vi: {
+      app_title: "KeyMouse Fluent Design",
+      app_desc: "Điều khiển chuột mượt mà bằng bàn phím trên Windows 11",
+      status_on: "ĐANG BẬT",
+      status_off: "ĐANG TẮT",
+      mouse_diagram_title: "Sơ Đồ Phím Chuột",
+      mouse_diagram_sub: "Nhấp vào nút để đổi phím",
+      left_click: "Chuột Trái",
+      right_click: "Chuột Phải",
+      scroll_up: "▲ Cuộn Lên",
+      scroll_down: "▼ Cuộn Xuống",
+      turbo: "🚀 Turbo",
+      turbo_tip: "Tăng tốc chuột 2x",
+      sniper: "🎯 Bắn Tỉa",
+      sniper_tip: "Giảm tốc chậm chính xác 1px",
+      dpad_title: "CỤM DI CHUYỂN CON TRỎ",
+      dpad_sub: "Nhấp phím để gán hướng",
+      dpad_up: "Lên",
+      dpad_left: "Trái",
+      dpad_down: "Xuống",
+      dpad_right: "Phải",
+      hotkeys_title: "Phím Tắt Bật / Tắt (Hotkeys)",
+      hotkeys_sub: "Có thể thêm / xoá tự do",
+      add_hotkey_btn: "Thêm phím tắt / tổ hợp mới...",
+      speed_title: "Độ Nhạy & Gia Tốc (DPI)",
+      min_speed: "Tốc độ chạm nhẹ (Min)",
+      max_speed: "Tốc độ tối đa (Max)",
+      accel_time: "Thời gian gia tốc",
+      turbo_mult: "Hệ số Turbo (Shift)",
+      beep_toggle: "🔊 Âm thanh bíp báo hiệu khi Bật/Tắt",
+      toast_pos: "🔔 Vị trí Toast Thông Báo (OSD)",
+      pos_top_center: "Trên cùng - Giữa (Mặc định)",
+      pos_top_right: "Trên cùng - Góc phải",
+      pos_top_left: "Trên cùng - Góc trái",
+      pos_bottom_center: "Dưới cùng - Giữa (Taskbar)",
+      pos_bottom_right: "Dưới cùng - Góc phải",
+      pos_bottom_left: "Dưới cùng - Góc trái",
+      btn_reset: "Khôi phục mặc định",
+      tray_hint: "Đúp chuột vào icon Khay để mở lại bất cứ lúc nào",
+      btn_minimize: "Thu nhỏ vào Khay (Tray)",
+      modal_title_assign: "Gán phím cho ",
+      modal_title_add: "Thêm Tổ Hợp Phím Tắt",
+      modal_sub: "Bấm phím hoặc tổ hợp phím bạn muốn gán trên bàn phím:",
+      modal_waiting: "Chờ phím bấm...",
+      modal_cancel: "Huỷ bỏ (Esc)",
+      modal_confirm: "Xác nhận (Enter)",
+      tag_exit: "Thoát chuột",
+      tag_toggle: "Bật / Tắt",
+      del_hk_title: "Xoá phím tắt này",
+    },
+    en: {
+      app_title: "KeyMouse Fluent Design",
+      app_desc: "Smooth keyboard mouse control for Windows 11",
+      status_on: "ENABLED",
+      status_off: "DISABLED",
+      mouse_diagram_title: "Mouse Button Mapping",
+      mouse_diagram_sub: "Click any button to remap key",
+      left_click: "Left Click",
+      right_click: "Right Click",
+      scroll_up: "▲ Scroll Up",
+      scroll_down: "▼ Scroll Down",
+      turbo: "🚀 Turbo",
+      turbo_tip: "Accelerate mouse speed 2x",
+      sniper: "🎯 Sniper Mode",
+      sniper_tip: "Slow precision 1px cursor control",
+      dpad_title: "CURSOR MOVEMENT CLUSTER",
+      dpad_sub: "Click key to remap direction",
+      dpad_up: "Up",
+      dpad_left: "Left",
+      dpad_down: "Down",
+      dpad_right: "Right",
+      hotkeys_title: "Toggle Hotkeys",
+      hotkeys_sub: "Add or remove combinations freely",
+      add_hotkey_btn: "Add new hotkey combo...",
+      speed_title: "Sensitivity & Acceleration (DPI)",
+      min_speed: "Minimum / Tap Speed (Min)",
+      max_speed: "Maximum Speed (Max)",
+      accel_time: "Acceleration Time",
+      turbo_mult: "Turbo Multiplier (Shift)",
+      beep_toggle: "🔊 Audio beep on Toggle",
+      toast_pos: "🔔 OSD Toast Position",
+      pos_top_center: "Top - Center (Default)",
+      pos_top_right: "Top - Right Corner",
+      pos_top_left: "Top - Left Corner",
+      pos_bottom_center: "Bottom - Center (Taskbar)",
+      pos_bottom_right: "Bottom - Right Corner",
+      pos_bottom_left: "Bottom - Left Corner",
+      btn_reset: "Reset Defaults",
+      tray_hint: "Double-click Tray Icon anytime to reopen",
+      btn_minimize: "Minimize to Tray",
+      modal_title_assign: "Remap key for ",
+      modal_title_add: "Add New Hotkey",
+      modal_sub: "Press desired key or combo on your keyboard:",
+      modal_waiting: "Waiting for keypress...",
+      modal_cancel: "Cancel (Esc)",
+      modal_confirm: "Confirm (Enter)",
+      tag_exit: "Exit Mode",
+      tag_toggle: "Toggle",
+      del_hk_title: "Delete this hotkey",
+    }
+  };
+
+  let currentLang = "vi";
+
+  function t(key) {
+    const dict = I18N[currentLang] || I18N.vi;
+    return dict[key] || key;
+  }
+
+  function setLanguage(lang, sync = true) {
+    currentLang = (lang === "en") ? "en" : "vi";
+    config.lang = currentLang;
+
+    const btnVi = document.getElementById("btn-lang-vi");
+    const btnEn = document.getElementById("btn-lang-en");
+    if (btnVi && btnEn) {
+      if (currentLang === "en") {
+        btnVi.classList.remove("active");
+        btnEn.classList.add("active");
+      } else {
+        btnVi.classList.add("active");
+        btnEn.classList.remove("active");
+      }
+    }
+
+    document.querySelectorAll("[data-i18n]").forEach(el => {
+      const k = el.getAttribute("data-i18n");
+      const text = t(k);
+      if (text) {
+        el.textContent = text;
+      }
+    });
+
+    const turboEl = document.getElementById("callout-turbo");
+    if (turboEl) turboEl.title = t("turbo_tip");
+    const sniperEl = document.getElementById("callout-sniper");
+    if (sniperEl) sniperEl.title = t("sniper_tip");
+
+    renderUI();
+    if (sync) {
+      syncConfig();
+    }
+  }
+
+  let config = {
+    mouse_mode: true,
+    lang: "vi",
+    min_speed: 0.7,
+    max_speed: 7.5,
+    accel_ms: 450,
+    turbo_mult: 2.0,
+    enable_beep: true,
+    toast_pos: "top-center",
+    hotkeys: [
+      { combo: "Shift + Alt", enabled: true, action: "toggle" },
+      { combo: "F8", enabled: true, action: "toggle" },
+      { combo: "Alt + Space", enabled: false, action: "toggle" },
+      { combo: "Esc", enabled: true, action: "exit" }
+    ],
+    bindings: {
+      lclick: "Space",
+      rclick: "X",
+      scroll_up: "E",
+      scroll_down: "Q",
+      up: "W",
+      down: "S",
+      left: "A",
+      right: "D"
+    }
+  };
+
+  let activeRecordTarget = null;
+  let currentRecordedCombo = "";
+
+  async function loadConfig() {
+    try {
+      const res = await fetch("/api/config");
+      if (res.ok) {
+        const data = await res.json();
+        config = { ...config, ...data };
+        if (config.lang) {
+          currentLang = config.lang;
+        }
+        if (!config.hotkeys || config.hotkeys.length === 0) {
+          config.hotkeys = [
+            { combo: "Shift + Alt", enabled: true, action: "toggle" },
+            { combo: "F8", enabled: true, action: "toggle" },
+            { combo: "Alt + Space", enabled: false, action: "toggle" },
+            { combo: "Esc", enabled: true, action: "exit" }
+          ];
+        }
+      }
+    } catch (e) {
+      console.log("Config load fallback", e);
+    }
+    setLanguage(currentLang, false);
+  }
+
+  function renderUI() {
+    // Status Badge
+    const badge = document.getElementById("status-toggle-btn");
+    const label = document.getElementById("status-label");
+    if (config.mouse_mode) {
+      badge.classList.remove("off");
+      label.textContent = t("status_on");
+    } else {
+      badge.classList.add("off");
+      label.textContent = t("status_off");
+    }
+
+    // Bindings Preview
+    document.getElementById("val-lclick").textContent = config.bindings.lclick || "Space";
+    document.getElementById("val-rclick").textContent = config.bindings.rclick || "X";
+    document.getElementById("val-scroll-up").textContent = config.bindings.scroll_up || "E";
+    document.getElementById("val-scroll-down").textContent = config.bindings.scroll_down || "Q";
+    document.getElementById("btn-up").textContent = config.bindings.up || "W";
+    document.getElementById("btn-down").textContent = config.bindings.down || "S";
+    document.getElementById("btn-left").textContent = config.bindings.left || "A";
+    document.getElementById("btn-right").textContent = config.bindings.right || "D";
+
+    // Sliders
+    document.getElementById("rng-min-speed").value = config.min_speed;
+    document.getElementById("val-min-speed").textContent = Number(config.min_speed).toFixed(1) + " px";
+
+    document.getElementById("rng-max-speed").value = config.max_speed;
+    document.getElementById("val-max-speed").textContent = Number(config.max_speed).toFixed(1) + " px";
+
+    document.getElementById("rng-accel").value = config.accel_ms;
+    document.getElementById("val-accel").textContent = config.accel_ms + " ms";
+
+    document.getElementById("rng-turbo").value = config.turbo_mult;
+    document.getElementById("val-turbo").textContent = Number(config.turbo_mult).toFixed(1) + "x";
+
+    document.getElementById("chk-beep").checked = !!config.enable_beep;
+    document.getElementById("sel-toast-pos").value = config.toast_pos || "top-center";
+
+    // Render Hotkeys
+    renderHotkeys();
+  }
+
+  function renderHotkeys() {
+    const container = document.getElementById("hotkey-container");
+    container.innerHTML = "";
+
+    config.hotkeys.forEach((hk, index) => {
+      const item = document.createElement("div");
+      item.className = "hotkey-item" + (hk.enabled ? "" : " disabled");
+
+      const parts = hk.combo.split("+").map(s => s.trim());
+      const capsHtml = parts.map(p => `<span class="key-cap">${p}</span>`).join(" + ");
+
+      const tagText = hk.action === "exit" || hk.combo.toUpperCase().includes("ESC") ? t("tag_exit") : t("tag_toggle");
+
+      item.innerHTML = `
+        <div class="hotkey-left">
+          <label class="chk-wrap">
+            <input type="checkbox" ${hk.enabled ? "checked" : ""} onchange="toggleHotkey(${index}, this.checked)">
+            <div class="chk-custom">
+              <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+          </label>
+          <div class="hotkey-keys">
+            ${capsHtml}
+            <span class="hotkey-tag">${tagText}</span>
+          </div>
+        </div>
+        <button class="btn-del-hotkey" onclick="deleteHotkey(${index})" title="${t('del_hk_title')}">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+        </button>
+      `;
+      container.appendChild(item);
+    });
+  }
+
+  function toggleHotkey(index, checked) {
+    config.hotkeys[index].enabled = checked;
+    renderHotkeys();
+    syncConfig();
+  }
+
+  function deleteHotkey(index) {
+    config.hotkeys.splice(index, 1);
+    renderHotkeys();
+    syncConfig();
+  }
+
+  function startAddHotkey() {
+    activeRecordTarget = "new_hotkey";
+    currentRecordedCombo = "";
+    document.getElementById("modal-target-title").textContent = t("modal_title_add");
+    document.getElementById("modal-key-preview").innerHTML = `<span class="key-cap" style="opacity:0.6;">${t("modal_waiting")}</span>`;
+    document.getElementById("record-modal").classList.add("active");
+  }
+
+  function recordTarget(target, title) {
+    activeRecordTarget = target;
+    currentRecordedCombo = "";
+    document.getElementById("modal-target-title").textContent = t("modal_title_assign") + title;
+    document.getElementById("modal-key-preview").innerHTML = `<span class="key-cap" style="opacity:0.6;">${t("modal_waiting")}</span>`;
+    document.getElementById("record-modal").classList.add("active");
+  }
+
+  window.addEventListener("keydown", (e) => {
+    if (!activeRecordTarget) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (e.key === "Escape") {
+      closeModal();
+      return;
+    }
+
+    if (e.key === "Enter" && currentRecordedCombo) {
+      confirmRecordedKey();
+      return;
+    }
+
+    let keyName = e.key;
+    if (e.code === "Space") keyName = "Space";
+    if (e.key.length === 1) keyName = e.key.toUpperCase();
+
+    const parts = [];
+    if (e.ctrlKey) parts.push("Ctrl");
+    if (e.shiftKey) parts.push("Shift");
+    if (e.altKey) parts.push("Alt");
+    if (e.metaKey) parts.push("Win");
+
+    if (!["Control", "Shift", "Alt", "Meta"].includes(e.key)) {
+      parts.push(keyName);
+    }
+
+    const comboStr = parts.join(" + ");
+    currentRecordedCombo = comboStr || keyName;
+
+    // Render Preview
+    const pParts = currentRecordedCombo.split("+").map(s => s.trim());
+    document.getElementById("modal-key-preview").innerHTML = pParts.map(p => `<span class="key-cap">${p}</span>`).join(" + ");
+
+    // If single binding (not hotkey) and key is not modifier:
+    if (activeRecordTarget !== "new_hotkey" && !["Control", "Shift", "Alt", "Meta"].includes(e.key)) {
+      config.bindings[activeRecordTarget] = keyName;
+      closeModal();
+      renderUI();
+      syncConfig();
+    }
+  });
+
+  function confirmRecordedKey() {
+    if (!currentRecordedCombo) {
+      closeModal();
+      return;
+    }
+
+    if (activeRecordTarget === "new_hotkey") {
+      const isExit = currentRecordedCombo.toUpperCase().includes("ESC");
+      config.hotkeys.push({
+        combo: currentRecordedCombo,
+        enabled: true,
+        action: isExit ? "exit" : "toggle"
+      });
+      renderHotkeys();
+      syncConfig();
+    }
+    closeModal();
+  }
+
+  function closeModal() {
+    activeRecordTarget = null;
+    currentRecordedCombo = "";
+    document.getElementById("record-modal").classList.remove("active");
+  }
+
+  function onSpeedChange() {
+    config.min_speed = parseFloat(document.getElementById("rng-min-speed").value);
+    config.max_speed = parseFloat(document.getElementById("rng-max-speed").value);
+    config.accel_ms = parseInt(document.getElementById("rng-accel").value);
+    config.turbo_mult = parseFloat(document.getElementById("rng-turbo").value);
+
+    document.getElementById("val-min-speed").textContent = config.min_speed.toFixed(1) + " px";
+    document.getElementById("val-max-speed").textContent = config.max_speed.toFixed(1) + " px";
+    document.getElementById("val-accel").textContent = config.accel_ms + " ms";
+    document.getElementById("val-turbo").textContent = config.turbo_mult.toFixed(1) + "x";
+
+    syncConfig();
+  }
+
+  function onBeepChange() {
+    config.enable_beep = document.getElementById("chk-beep").checked;
+    syncConfig();
+  }
+
+  function onToastPosChange() {
+    config.toast_pos = document.getElementById("sel-toast-pos").value;
+    syncConfig();
+  }
+
+  async function toggleMouseMode() {
+    try {
+      const res = await fetch("/api/toggle", { method: "POST" });
+      if (res.ok) {
+        config.mouse_mode = !config.mouse_mode;
+        renderUI();
+      }
+    } catch(e) {}
+  }
+
+  function resetDefaults() {
+    config.min_speed = 0.7;
+    config.max_speed = 7.5;
+    config.accel_ms = 450;
+    config.turbo_mult = 2.0;
+    config.enable_beep = true;
+    config.toast_pos = "top-center";
+    config.hotkeys = [
+      { combo: "Shift + Alt", enabled: true, action: "toggle" },
+      { combo: "F8", enabled: true, action: "toggle" },
+      { combo: "Alt + Space", enabled: false, action: "toggle" },
+      { combo: "Esc", enabled: true, action: "exit" }
+    ];
+    config.bindings = {
+      lclick: "Space",
+      rclick: "X",
+      scroll_up: "E",
+      scroll_down: "Q",
+      up: "W",
+      down: "S",
+      left: "A",
+      right: "D"
+    };
+    renderUI();
+    syncConfig();
+  }
+
+  async function syncConfig() {
+    try {
+      await fetch("/api/config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(config)
+      });
+    } catch(e) {}
+  }
+
+  async function minimizeToTray() {
+    try {
+      await fetch("/api/hide", { method: "POST" });
+    } catch(e) {}
+    window.close();
+  }
+
+  // Periodic poll to keep status badge in sync
+  setInterval(async () => {
+    try {
+      const res = await fetch("/api/status");
+      if (res.ok) {
+        const s = await res.json();
+        if (s.mouse_mode !== config.mouse_mode) {
+          config.mouse_mode = s.mouse_mode;
+          renderUI();
+        }
+      }
+    } catch(e) {}
+  }, 400);
+
+  loadConfig();
+</script>
+</body>
+</html>
