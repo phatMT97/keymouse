@@ -381,6 +381,7 @@ unsafe extern "system" {
         lp_process_information: *mut PROCESS_INFORMATION,
     ) -> i32;
     fn CloseHandle(h_object: isize) -> i32;
+    fn TerminateProcess(h_process: isize, u_exit_code: u32) -> i32;
 }
 
 // Embedded Fluent UI HTML & Icons
@@ -718,8 +719,36 @@ fn reset_all_keys() {
 
 static UI_HWND: AtomicIsize = AtomicIsize::new(0);
 static SPAWNED_PID: AtomicU32 = AtomicU32::new(0);
+static SPAWNED_PROCESS: AtomicIsize = AtomicIsize::new(0);
 static FOUND_HWND: AtomicIsize = AtomicIsize::new(0);
 static LAST_SPAWN_TIME: AtomicU64 = AtomicU64::new(0);
+
+fn close_fluent_ui() {
+    let ui = UI_HWND.swap(0, Ordering::SeqCst);
+    if ui != 0 && unsafe { IsWindow(ui) } != 0 {
+        unsafe {
+            PostMessageW(ui, WM_CLOSE, 0, 0);
+        }
+    }
+    let hproc = SPAWNED_PROCESS.swap(0, Ordering::SeqCst);
+    if hproc != 0 {
+        unsafe {
+            TerminateProcess(hproc, 0);
+            CloseHandle(hproc);
+        }
+    }
+    let pid = SPAWNED_PID.swap(0, Ordering::SeqCst);
+    if pid != 0 {
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            let _ = std::process::Command::new("taskkill")
+                .args(&["/F", "/T", "/PID", &pid.to_string()])
+                .creation_flags(0x08000000)
+                .output();
+        }
+    }
+}
 
 unsafe extern "system" fn enum_desktop_windows_proc(hwnd: isize, lparam: isize) -> i32 {
     unsafe {
@@ -818,7 +847,10 @@ fn open_fluent_ui() {
         if res != 0 {
             let pid = pi.dw_process_id;
             SPAWNED_PID.store(pid, Ordering::SeqCst);
-            CloseHandle(pi.h_process);
+            let old_proc = SPAWNED_PROCESS.swap(pi.h_process, Ordering::SeqCst);
+            if old_proc != 0 {
+                CloseHandle(old_proc);
+            }
             CloseHandle(pi.h_thread);
 
             thread::spawn(move || {
@@ -1818,6 +1850,7 @@ unsafe extern "system" fn tray_wnd_proc(hwnd: isize, msg: u32, w_param: usize, l
                         open_fluent_ui();
                     }
                     IDM_EXIT => {
+                        close_fluent_ui();
                         DestroyWindow(hwnd);
                     }
                     _ => {}
@@ -1885,10 +1918,7 @@ unsafe extern "system" fn tray_wnd_proc(hwnd: isize, msg: u32, w_param: usize, l
                 0
             }
             WM_DESTROY => {
-                let ui = UI_HWND.load(Ordering::SeqCst);
-                if ui != 0 && IsWindow(ui) != 0 {
-                    PostMessageW(ui, WM_CLOSE, 0, 0);
-                }
+                close_fluent_ui();
                 let toast = TOAST_HWND.load(Ordering::SeqCst);
                 if toast != 0 {
                     DestroyWindow(toast);
